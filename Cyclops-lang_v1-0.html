@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tiny C Subset in the Browser (Float + Int + JS.MATH + JS.TIME + JS.IF + JS.STRING + Arrays + GOTO + JS.WEB)</title>
+  <style>
+    body { font-family: sans-serif; }
+    textarea { width: 100%; height: 200px; }
+    pre { background: #111; color: #0f0; padding: 8px; min-height: 120px; }
+    #stdin { width: 60%; }
+  </style>
+</head>
+<body>
+<h3>C subset source</h3>
+<textarea id="source">
+// Demo: BTC price fetch + JS.STRING + JS.WEB
+
+int main() {
+    string data;
+    string tail;
+    string priceStr;
+    float price;
+    printf("Fetching BTC price...\n");
+    data = JS.WEB getText, "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+
+    printf("RAW JSON:\n%s\n", data);
+    // Golden number: colon after "usd" is always at index 22
+    tail = data + 18;
+    printf("tail = %s\n", tail);
+    // Extract exactly 5 digits (BTC price is 5 digits in 2026)
+    priceStr = JS.STRING strncpy, tail, 5;
+    printf("priceStr = %s\n", priceStr);
+    price = JS.STRING tofloat, priceStr;
+    printf("BTC price: %f\n", price);
+    return 0;
+}
+
+</textarea>
+
+<h3>Input (stdin)</h3>
+<input id="stdin" placeholder="Enter input here">
+<button id="submitInput">Submit</button>
+
+<h3>Output (stdout)</h3>
+<pre id="output"></pre>
+
+<button id="compileRun">Compile & Run</button>
+
+<script>
+// ---------- Runtime ----------
+
+const env = {};
+const arrays = {};
+let stdoutBuffer = '';
+let stdinQueue = [];
+
+// ---------- JS namespace ----------
+
+const JS = {};
+JS.WEB = {};
+
+// ---------- JS.WEB ----------
+
+JS.WEB.getText = async function(url) {
+  const response = await fetch(url);
+  return await response.text();
+};
+
+function flushStdout() {
+  const el = document.getElementById('output');
+  if (el) el.textContent = stdoutBuffer;
+}
+
+// ---------- printf formatting ----------
+
+function formatPrintf(fmt, args) {
+  let out = '';
+  let argIndex = 0;
+
+  for (let i = 0; i < fmt.length; i++) {
+    const ch = fmt[i];
+
+    if (ch === '%' && i + 1 < fmt.length) {
+      const next = fmt[i + 1];
+
+      if (next === '.') {
+        const match = fmt.slice(i).match(/^%\.(\d+)f/);
+        if (match) {
+          const precision = parseInt(match[1], 10);
+          const val = args[argIndex++];
+          out += Number(val).toFixed(precision);
+          i += match[0].length - 1;
+          continue;
+        }
+      }
+
+      const spec = fmt[++i];
+      const val = args[argIndex++];
+
+      if (spec === 'd') out += (val | 0);
+      else if (spec === 'f') out += Number(val).toFixed(6);
+      else if (spec === 's') out += String(val);
+      else if (spec === '%') out += '%';
+      else out += '%' + spec;
+
+    } else {
+      out += ch;
+    }
+  }
+
+  return out;
+}
+
+function printf(fmt /*, ...args */) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  const text = formatPrintf(fmt, args);
+  stdoutBuffer += text;
+  flushStdout();
+  return text.length;
+}
+
+// ---------- scanf ----------
+
+function scanf(fmt /*, varName1, varName2, ... */) {
+  if (stdinQueue.length === 0) throw { type: "NeedInput" };
+
+  const raw = stdinQueue.shift().trim();
+  const parts = raw.split(/\s+/);
+  let partIndex = 0;
+  let argIndex = 1;
+
+  for (let i = 0; i < fmt.length; i++) {
+    if (fmt[i] === '%' && i + 1 < fmt.length) {
+      const spec = fmt[++i];
+      const varName = arguments[argIndex++];
+      const token = parts[partIndex++];
+
+      if (spec === 'd') env[varName] = parseInt(token, 10);
+      else if (spec === 'f') env[varName] = parseFloat(token);
+      else if (spec === 's') env[varName] = token;
+    }
+  }
+  return argIndex - 1;
+}
+
+document.getElementById('submitInput').onclick = () => {
+  const val = document.getElementById('stdin').value;
+  stdinQueue.push(val);
+  document.getElementById('stdin').value = '';
+};
+
+// ---------- Label parser ----------
+
+function parseLabels(bodyLines) {
+  const labels = {};
+  for (let i = 0; i < bodyLines.length; i++) {
+    const l = bodyLines[i].trim();
+    const m = l.match(/^:([A-Za-z_]\w*)\s*\{$/);
+    if (m) {
+      labels[m[1]] = i;
+    }
+  }
+  return labels;
+}
+
+// ---------- Compiler ----------
+
+async function compileAndRun(src) {
+  stdoutBuffer = '';
+  flushStdout();
+  Object.keys(env).forEach(k => delete env[k]);
+  Object.keys(arrays).forEach(k => delete arrays[k]);
+
+  const lines = src.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  // Global declarations
+  for (const line of lines) {
+    if ((line.startsWith('int ') || line.startsWith('float ') || line.startsWith('string ')) &&
+        !line.includes('main')) {
+      parseGlobalDecl(line);
+    }
+  }
+
+  const mainStart = lines.findIndex(l => l.startsWith('int main'));
+  if (mainStart === -1) {
+    printf("No main() found\n");
+    return;
+  }
+
+  let bodyLines = [];
+  let depth = 0;
+  for (let i = mainStart; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.includes('{')) {
+      depth++;
+      if (depth === 1) continue;
+    }
+    if (l.includes('}')) {
+      depth--;
+      if (depth === 0) break;
+    }
+    if (depth > 0) bodyLines.push(l);
+  }
+
+  const labels = parseLabels(bodyLines);
+
+  try {
+    let pc = 0;
+    let inLabel = false;
+
+    while (pc < bodyLines.length) {
+      let rawLine = bodyLines[pc];
+      let line = rawLine.replace(/;$/, '').trim();
+
+      if (line.startsWith(':')) {
+        if (!inLabel) {
+          pc++;
+          while (pc < bodyLines.length) {
+            const l2 = bodyLines[pc].trim();
+            if (l2.includes('}')) {
+              pc++;
+              break;
+            }
+            pc++;
+          }
+          continue;
+        } else {
+          pc++;
+          continue;
+        }
+      }
+
+      if (line === '}' || line === '};') {
+        if (inLabel) {
+          inLabel = false;
+        }
+        pc++;
+        continue;
+      }
+
+      const jump = await execLine(line, labels);
+
+      if (typeof jump === 'number') {
+        inLabel = true;
+        pc = jump;
+      } else {
+        pc++;
+      }
+    }
+  } catch (e) {
+    if (e && e.type === "NeedInput") {
+      printf("\n[Program paused: provide input and press Submit]\n");
+    } else {
+      printf("\n[Error] " + e);
+    }
+  }
+}
+
+// ---------- Global declarations ----------
+
+function parseGlobalDecl(line) {
+  const decl = line.replace(/;$/, '');
+
+  if (decl.startsWith("float ")) {
+    const body = decl.replace(/^float\s+/, '');
+    if (body.includes('[')) {
+      const m = body.match(/^([A-Za-z_]\w*)\[(\d+)\]\s*=\s*\{([^}]*)\}$/);
+      if (!m) return;
+      const name = m[1];
+      const size = parseInt(m[2], 10);
+      const values = m[3].split(',').map(v => parseFloat(v.trim()));
+      const arr = new Float64Array(size);
+      for (let i = 0; i < size && i < values.length; i++) arr[i] = values[i];
+      arrays[name] = { data: arr, type: "float" };
+    } else {
+      const vars = body.split(',').map(v => v.trim());
+      for (const v of vars) env[v] = 0.0;
+    }
+    return;
+  }
+
+  if (decl.startsWith("int ")) {
+    const body = decl.replace(/^int\s+/, '');
+    if (body.includes('[')) {
+      const m = body.match(/^([A-Za-z_]\w*)\[(\d+)\]\s*=\s*\{([^}]*)\}$/);
+      if (!m) return;
+      const name = m[1];
+      const size = parseInt(m[2], 10);
+      const values = m[3].split(',').map(v => parseInt(v.trim(), 10));
+      const arr = new Int32Array(size);
+      for (let i = 0; i < size && i < values.length; i++) arr[i] = values[i];
+      arrays[name] = { data: arr, type: "int" };
+    } else {
+      const vars = body.split(',').map(v => v.trim());
+      for (const v of vars) env[v] = 0;
+    }
+    return;
+  }
+
+  if (decl.startsWith("string ")) {
+    const body = decl.replace(/^string\s+/, '');
+    if (body.includes('[')) {
+      const m = body.match(/^([A-Za-z_]\w*)\[(\d+)\]\s*=\s*\{([^}]*)\}$/);
+      if (!m) return;
+      const name = m[1];
+      const size = parseInt(m[2], 10);
+      const rawVals = m[3].split(',').map(v => v.trim());
+      const arr = new Array(size);
+      for (let i = 0; i < size && i < rawVals.length; i++) {
+        arr[i] = evalStringLiteral(rawVals[i]);
+      }
+      arrays[name] = { data: arr, type: "string" };
+    } else {
+      const vars = body.split(',').map(v => v.trim());
+      for (const v of vars) env[v] = "";
+    }
+    return;
+  }
+}
+
+// ---------- Execute main lines ----------
+
+async function execLine(line, labels) {
+  if (line.startsWith('goto')) {
+    const m = line.match(/^goto\s*\(\s*([^,]+)\s*,\s*([A-Za-z_]\w*)\s*,\s*([A-Za-z_]\w*)\s*\)$/);
+    if (m) {
+      const condVal = evalExpr(m[1]);
+      const trueLabel = m[2];
+      const falseLabel = m[3];
+
+      if (condVal === 1) return labels[trueLabel];
+      else return labels[falseLabel];
+    }
+  }
+
+  if (line.startsWith('printf')) {
+    execPrintf(line);
+    return null;
+  }
+
+  if (line.startsWith('scanf')) {
+    execScanf(line);
+    return null;
+  }
+
+  if (line.includes('=')) {
+    await execAssignment(line);
+    return null;
+  }
+
+  return null;
+}
+
+// ---------- printf ----------
+
+function execPrintf(line) {
+  const m = line.match(/^printf\((.*)\)$/);
+  if (!m) return;
+  const parts = splitArgs(m[1]);
+  const fmt = evalStringLiteral(parts[0]);
+  const values = parts.slice(1).map(p => evalExpr(p));
+  printf.apply(null, [fmt].concat(values));
+}
+
+// ---------- scanf ----------
+
+function execScanf(line) {
+  const m = line.match(/^scanf\((.*)\)$/);
+  if (!m) return;
+  const parts = splitArgs(m[1]);
+  const fmt = evalStringLiteral(parts[0]);
+  const vars = parts.slice(1).map(p => p.replace(/^&/, '').trim());
+  scanf.apply(null, [fmt].concat(vars));
+}
+
+// ---------- Assignment ----------
+
+async function execAssignment(line) {
+  const idx = line.indexOf('=');
+  const lhs = line.slice(0, idx).trim();
+  const rhs = line.slice(idx + 1).trim();
+
+  const value = await evalExprAsync(rhs);
+
+  if (lhs.includes('[')) {
+    const m = lhs.match(/^([A-Za-z_]\w*)\[(.+)\]$/);
+    const name = m[1];
+    const idxVal = evalExpr(m[2]);
+    arrays[name].data[idxVal] = value;
+  } else {
+    env[lhs] = value;
+  }
+}
+
+// ---------- JS.MATH ----------
+
+function evalJsMath(expr) {
+  const withoutPrefix = expr.replace('JS.MATH', '').trim();
+  const parts = withoutPrefix.split(',').map(p => p.trim());
+
+  const funcName = parts[0];
+  const args = parts.slice(1).map(expr => evalExpr(expr));
+
+  if (typeof Math[funcName] !== 'function') {
+    throw new Error('Unknown Math function: ' + funcName);
+  }
+
+  return Math[funcName](...args);
+}
+
+// ---------- JS.TIME ----------
+
+function evalJsTime(expr) {
+  const keyword = expr.replace("JS.TIME", "").trim();
+  const d = new Date();
+
+  switch (keyword) {
+    case "year":      return d.getFullYear();
+    case "month":     return d.getMonth() + 1;
+    case "day":       return d.getDate();
+    case "hour":      return d.getHours();
+    case "minute":    return d.getMinutes();
+    case "second":    return d.getSeconds();
+    case "timestamp": return d.getTime() / 1000.0;
+    default:
+      throw new Error("Unknown JS.TIME keyword: " + keyword);
+  }
+}
+
+// ---------- JS.IF ----------
+
+function evalJsIf(s) {
+  const m = s.match(/^JS\.IF\s*\(\s*"([^"]+)"\s*\)$/);
+  if (!m) return -1;
+
+  const cond = m[1];
+
+  const sandbox = {};
+  for (const k in env) sandbox[k] = env[k];
+  for (const k in arrays) sandbox[k] = arrays[k].data;
+
+  let result = 0;
+
+  try {
+    result = Function("sandbox", `
+      with (sandbox) {
+        return (${cond});
+      }
+    `)(sandbox);
+  } catch (e) {
+    result = 0;
+  }
+
+  return result ? 1 : -1;
+}
+
+// ---------- JS.STRING ----------
+
+function evalJsString(expr) {
+  const withoutPrefix = expr.replace("JS.STRING", "").trim();
+  const parts = withoutPrefix.split(',').map(p => p.trim());
+  const funcName = parts[0];
+  const args = parts.slice(1).map(a => evalExpr(a));
+
+  switch (funcName) {
+    case "strlen":
+      return String(args[0]).length;
+
+    case "strcmp": {
+      const a = String(args[0]);
+      const b = String(args[1]);
+      return (a === b) ? 1 : -1;
+    }
+
+    case "strcat":
+      return String(args[0]) + String(args[1]);
+
+    case "strstr": {
+      const a = String(args[0]);
+      const b = String(args[1]);
+      return a.indexOf(b);
+    }
+
+    case "strncpy": {
+      const a = String(args[0]);
+      const n = parseInt(args[1], 10);
+      return a.substring(0, n);
+    }
+
+    case "tofloat": {
+      const s = String(args[0]);
+      const v = parseFloat(s);
+      return Number.isNaN(v) ? 0 : v;
+    }
+
+    default:
+      throw new Error("Unknown JS.STRING function: " + funcName);
+  }
+}
+
+// ---------- Expression evaluator (sync) ----------
+
+function evalExpr(s) {
+  s = s.trim();
+
+  if (s.startsWith("JS.MATH"))   return evalJsMath(s);
+  if (s.startsWith("JS.TIME"))   return evalJsTime(s);
+  if (s.startsWith("JS.IF"))     return evalJsIf(s);
+  if (s.startsWith("JS.STRING")) return evalJsString(s);
+
+  if (s.startsWith("JS.WEB")) {
+    const withoutPrefix = s.replace("JS.WEB", "").trim();
+    const parts = withoutPrefix.split(',').map(p => p.trim());
+    const funcName = parts[0];
+
+    if (funcName === "getText") {
+      const url = evalStringLiteral(parts[1]);
+      throw new Error("JS.WEB getText must be used in async context");
+    }
+
+    throw new Error("Unknown JS.WEB function: " + funcName);
+  }
+
+  if (s[0] === '"' && s[s.length - 1] === '"') {
+    return evalStringLiteral(s);
+  }
+
+  // Float literal
+  if (/^-?\d+\.\d+(e[-+]?\d+)?$/i.test(s)) return parseFloat(s);
+  if (/^-?\d+e[-+]?\d+$/i.test(s)) return parseFloat(s);
+
+  // Int literal
+  if (/^-?\d+$/.test(s)) return parseInt(s, 10);
+
+  // Array access: name[index]
+  const m = s.match(/^([A-Za-z_]\w*)\[(.+)\]$/);
+  if (m) {
+    const name = m[1];
+    const idxVal = evalExpr(m[2]);
+    return arrays[name].data[idxVal];
+  }
+
+  // Variable
+  if (/^[A-Za-z_]\w*$/.test(s)) return env[s];
+
+  // Arithmetic
+  const ops = ['+', '-', '*', '/'];
+  for (const op of ops) {
+    const pos = s.indexOf(op);
+    if (pos !== -1) {
+      const left = s.slice(0, pos);
+      const right = s.slice(pos + 1);
+      const L = evalExpr(left);
+      const R = evalExpr(right);
+
+      if (op === '+') {
+        if (typeof L === "string" && typeof R === "number") {
+          return L.substring(R);
+        }
+        if (typeof L === "number" && typeof R === "string") {
+          return R.substring(L);
+        }
+        return L + R;
+      }
+
+      if (op === '-') return L - R;
+      if (op === '*') return L * R;
+      if (op === '/') return L / R;
+    }
+  }
+
+  return 0;
+}
+
+// ---------- Expression evaluator (async) ----------
+
+async function evalExprAsync(s) {
+  s = s.trim();
+
+  if (s.startsWith("JS.WEB")) {
+    const withoutPrefix = s.replace("JS.WEB", "").trim();
+    const parts = withoutPrefix.split(',').map(p => p.trim());
+    const funcName = parts[0];
+
+    if (funcName === "getText") {
+      const url = evalStringLiteral(parts[1]);
+      return await JS.WEB.getText(url);
+    }
+
+    throw new Error("Unknown JS.WEB function: " + funcName);
+  }
+
+  return evalExpr(s);
+}
+
+// ---------- Helpers ----------
+
+function splitArgs(s) {
+  const out = [];
+  let cur = '';
+  let depth = 0;
+  let inString = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '"' && s[i - 1] !== '\\') {
+      inString = !inString;
+      cur += ch;
+    } else if (!inString && ch === ',' && depth === 0) {
+      out.push(cur.trim());
+      cur = '';
+    } else {
+      if (!inString && (ch === '(' || ch === '[')) depth++;
+      if (!inString && (ch === ')' || ch === ']')) depth--;
+      cur += ch;
+    }
+  }
+  if (cur.trim().length > 0) out.push(cur.trim());
+  return out;
+}
+
+function evalStringLiteral(s) {
+  s = s.trim();
+  if (s[0] === '"' && s[s.length - 1] === '"')
+    return s.slice(1, -1).replace(/\\n/g, '\n');
+  return s;
+}
+
+// ---------- UI ----------
+
+document.getElementById('compileRun').onclick = () => {
+  compileAndRun(document.getElementById('source').value);
+};
+</script>
+</body>
+</html>
