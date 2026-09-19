@@ -1,0 +1,13 @@
+Cyclops:
+  type: programming
+  color: "#00FF00" 
+  extensions:
+    - ".cyclops"
+    - ".cyc"
+  interpreters:
+    - "cyclops"
+  ace_mode: "c"
+  tm_scope: "source.cyclops"
+  group: "C"
+  aliases:
+    - "cyc"
