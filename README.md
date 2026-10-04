@@ -143,6 +143,21 @@ int main() {
     return 0;
 }
 
+### Returning From main
+
+`return expression;` immediately ends the program, including when executed inside
+a label block. Later statements are not executed. The browser interpreter's
+`compileAndRun()` promise resolves to the expression's value. A bare `return;`
+ends execution without a value; reaching the end of `main` also returns no value.
+
+```c
+int main() {
+    printf("done\n");
+    return 0;
+    printf("not executed\n");
+}
+```
+
 ## Installation
 Cyclops is distributed as a lightweight interpreter.
 
@@ -177,6 +192,19 @@ Cyclops welcomes:
 - JS integration modules
 - maths functions
 - polarity utilities
+
+### Running Interpreter Tests
+
+With Node.js 22 or newer installed, run:
+
+```sh
+node --test tests/*.test.cjs
+```
+
+No package installation is required. The tests execute the JavaScript embedded in
+both HTML interpreters with a minimal DOM stub. Web requests are mocked, so the
+suite does not contact external services. GitHub Actions runs the same suite on
+Node.js 22 and 24.
 
 ## License
 Cyclops-lang is open-source under a permissive license suitable for industrial, educational, and automation use.
