@@ -101,13 +101,19 @@ function formatPrintf(fmt, args) {
       }
 
       const spec = fmt[++i];
+      if (spec === '%') {
+        out += '%';
+        continue;
+      }
+      if (spec !== 'd' && spec !== 'f' && spec !== 's') {
+        out += '%' + spec;
+        continue;
+      }
       const val = args[argIndex++];
 
       if (spec === 'd') out += (val | 0);
       else if (spec === 'f') out += Number(val).toFixed(6);
       else if (spec === 's') out += String(val);
-      else if (spec === '%') out += '%';
-      else out += '%' + spec;
 
     } else {
       out += ch;
@@ -402,7 +408,7 @@ async function execAssignment(line) {
 
 function evalJsMath(expr) {
   const withoutPrefix = expr.replace('JS.MATH', '').trim();
-  const parts = withoutPrefix.split(',').map(p => p.trim());
+  const parts = splitArgs(withoutPrefix);
 
   const funcName = parts[0];
   const args = parts.slice(1).map(expr => evalExpr(expr));
@@ -464,7 +470,7 @@ function evalJsIf(s) {
 
 function evalJsString(expr) {
   const withoutPrefix = expr.replace("JS.STRING", "").trim();
-  const parts = withoutPrefix.split(',').map(p => p.trim());
+  const parts = splitArgs(withoutPrefix);
   const funcName = parts[0];
   const args = parts.slice(1).map(a => evalExpr(a));
 
@@ -516,7 +522,7 @@ function evalExpr(s) {
 
   if (s.startsWith("JS.WEB")) {
     const withoutPrefix = s.replace("JS.WEB", "").trim();
-    const parts = withoutPrefix.split(',').map(p => p.trim());
+    const parts = splitArgs(withoutPrefix);
     const funcName = parts[0];
 
     if (funcName === "getText") {
@@ -585,7 +591,7 @@ async function evalExprAsync(s) {
 
   if (s.startsWith("JS.WEB")) {
     const withoutPrefix = s.replace("JS.WEB", "").trim();
-    const parts = withoutPrefix.split(',').map(p => p.trim());
+    const parts = splitArgs(withoutPrefix);
     const funcName = parts[0];
 
     if (funcName === "getText") {

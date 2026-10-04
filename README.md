@@ -178,5 +178,18 @@ Cyclops welcomes:
 - maths functions
 - polarity utilities
 
+### Running Interpreter Tests
+
+With Node.js 22 or newer installed, run:
+
+```sh
+node --test tests/*.test.cjs
+```
+
+No package installation is required. The tests execute the JavaScript embedded in
+both HTML interpreters with a minimal DOM stub. Web requests are mocked, so the
+suite does not contact external services. GitHub Actions runs the same suite on
+Node.js 22 and 24.
+
 ## License
 Cyclops-lang is open-source under a permissive license suitable for industrial, educational, and automation use.
