@@ -246,6 +246,10 @@ async function compileAndRun(src) {
 
       const jump = await execLine(line, labels);
 
+      if (jump && jump.type === 'return') {
+        return jump.value;
+      }
+
       if (typeof jump === 'number') {
         inLabel = true;
         pc = jump;
@@ -327,6 +331,12 @@ function parseGlobalDecl(line) {
 // ---------- Execute main lines ----------
 
 async function execLine(line, labels) {
+  const returnMatch = line.match(/^return(?:\s+(.+))?$/);
+  if (returnMatch) {
+    const value = returnMatch[1] === undefined ? undefined : await evalExprAsync(returnMatch[1]);
+    return { type: 'return', value };
+  }
+
   if (line.startsWith('goto')) {
     const m = line.match(/^goto\s*\(\s*([^,]+)\s*,\s*([A-Za-z_]\w*)\s*,\s*([A-Za-z_]\w*)\s*\)$/);
     if (m) {
