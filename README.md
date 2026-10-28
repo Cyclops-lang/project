@@ -1,12 +1,12 @@
 //first draft 
+Written by Richard Stammers 
 
-
-# Cyclops-lang
+# Cyclops++
 A C-like language with JS-powered logic, numeric polarity branching, and deterministic flow.
 
-Cyclops is a lightweight, C-style programming language designed for clarity, predictability, and real-world automation. It looks like C, feels like C, and behaves like a numeric decision engine — powered by JavaScript, web functions, masks, and polarity-based branching.
+Cyclops++ is a lightweight, C-style programming language designed for clarity, predictability, and real-world automation. It looks like C, feels like C, and behaves like a numeric decision engine — powered by JavaScript, web functions, masks, and polarity-based branching.
 
-Cyclops is ideal for:
+Cyclops++ is ideal for:
 - deterministic workflows
 - automation scripts
 - trading logic
@@ -15,7 +15,7 @@ Cyclops is ideal for:
 - educational examples
 - numeric decision engines
 
-Cyclops is intentionally small, readable, and easy to learn for anyone familiar with C-like languages.
+Cyclops++ is intentionally small, readable, and easy to learn for anyone familiar with C-like languages.
 
 ## Features
 - C-style syntax — braces, blocks, declarations, printf, and familiar flow.
@@ -44,7 +44,7 @@ return 0;
 }
 
 ## Polarity Branching (Core Concept)
-Cyclops does not use boolean keywords. Instead, it uses numeric polarity:
+Cyclops++ does not use boolean keywords. Instead, it uses numeric polarity:
 
 TRUE = 1  
 FALSE = -1
@@ -144,7 +144,7 @@ int main() {
 }
 
 ## Installation
-Cyclops is distributed as a lightweight interpreter.
+Cyclops++ is distributed as a lightweight interpreter.
 
 ### Build
 make
@@ -153,7 +153,7 @@ make
 ./cyclops program.cyc
 
 ## Project Goals
-Cyclops aims to be:
+Cyclops++ aims to be:
 - simple
 - deterministic
 - C-like
@@ -170,7 +170,7 @@ Long-term goals include:
 - Lua-style neutral foundation governance
 
 ## Contributing
-Cyclops welcomes:
+Cyclops++ welcomes:
 - examples
 - documentation improvements
 - interpreter enhancements
@@ -179,4 +179,4 @@ Cyclops welcomes:
 - polarity utilities
 
 ## License
-Cyclops-lang is open-source under a permissive license suitable for industrial, educational, and automation use.
+Cyclops++ is open-source under a permissive license suitable for industrial, educational, and automation use.
