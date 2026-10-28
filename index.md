@@ -1,4 +1,4 @@
-# Cyclops‑lang: A Deterministic Polarity‑Based DSL for Clinical and Scientific Computation
+# Cyclops++: A Deterministic Polarity‑Based DSL for Clinical and Scientific Computation
 
 Author: Richard  Stammers
 Location: Brighton, UK  
@@ -8,14 +8,14 @@ Domain: Clinical computation, deterministic logic, medical formulas, scientific 
 
 ## Abstract
 
-Cyclops‑lang is a deterministic, polarity‑driven domain‑specific language designed to make complex medical and scientific formulas transparent, auditable, and easy to understand.  
+Cyclops++ is a deterministic, polarity‑driven domain‑specific language designed to make complex medical and scientific formulas transparent, auditable, and easy to understand.  
 Its polarity model (+1 / –1) enables explicit branching, deterministic execution, and clear decision pathways suitable for medicine, pharmacology, laboratory science, and industrial quality control.
 
-Cyclops‑lang provides a readable way to express renal formulas, dosage adjustments, threshold logic, and multi‑step clinical calculations in a form that clinicians and scientists can verify without needing traditional programming expertise.
+Cyclops++ provides a readable way to express renal formulas, dosage adjustments, threshold logic, and multi‑step clinical calculations in a form that clinicians and scientists can verify without needing traditional programming expertise.
 
 ---
 
-## Why Cyclops‑lang Exists
+## Why Cyclops++ Exists
 
 Clinical formulas — especially renal, pharmacokinetic, and diagnostic logic — are often:
 
@@ -24,7 +24,7 @@ Clinical formulas — especially renal, pharmacokinetic, and diagnostic logic �
 - opaque in their decision pathways  
 - hard to audit  
 
-Cyclops‑lang solves this by offering:
+Cyclops++ solves this by offering:
 
 - deterministic execution  
 - transparent branching  
@@ -32,7 +32,7 @@ Cyclops‑lang solves this by offering:
 - QR‑native distribution  
 - browser‑based evaluation  
 
-Cyclops‑lang is a professional DSL, not an esoteric language.
+Cyclops++ is a professional DSL, not an esoteric language.
 
 ---
 
@@ -40,7 +40,7 @@ Cyclops‑lang is a professional DSL, not an esoteric language.
 
 ### Deterministic Polarity Logic
 
-Cyclops‑lang uses polarity instead of Boolean values:
+Cyclops++ uses polarity instead of Boolean values:
 
 - +1 — affirmative condition  
 - –1 — negative condition  
@@ -52,11 +52,11 @@ This supports:
 - deterministic clinical logic  
 - compatibility with fuzzy or AI‑derived confidence scores
 
-**Even though Cyclops‑lang branching is determined solely by +1 and –1 polarity values, the JS.IF evaluator still provides full logical and bitwise operator support, allowing complex clinical and scientific conditions to be expressed cleanly and safely.**
+**Even though Cyclops++ branching is determined solely by +1 and –1 polarity values, the JS.IF evaluator still provides full logical and bitwise operator support, allowing complex clinical and scientific conditions to be expressed cleanly and safely.**
 
 ### Explicit Control Flow
 
-Cyclops‑lang uses labelled blocks and polarity‑conditioned routing:
+Cyclops++ uses labelled blocks and polarity‑conditioned routing:
 
 
 Ideal for:
@@ -68,9 +68,9 @@ Ideal for:
 
 ---
 
-## Why Cyclops‑lang Is Not an Esoteric Language
+## Why Cyclops++ Is Not an Esoteric Language
 
-Cyclops‑lang is not an esoteric language because it is:
+Cyclops++ is not an esoteric language because it is:
 
 - clinically focused  
 - deterministic  
@@ -79,7 +79,7 @@ Cyclops‑lang is not an esoteric language because it is:
 - used for medical formulas  
 - designed for scientific workflows  
 
-Cyclops‑lang belongs with:
+Cyclops++ belongs with:
 
 - MATLAB  
 - R  
@@ -112,8 +112,8 @@ Not with esoteric languages.
 
 ## Conclusion
 
-Cyclops‑lang is a professional, deterministic DSL designed for medicine, science, and engineering.  
+Cyclops++ is a professional, deterministic DSL designed for medicine, science, and engineering.  
 Its polarity‑based logic model provides clarity and auditability that traditional languages often lack.  
-By making formulas transparent and decision pathways explicit, Cyclops‑lang helps clinicians, scientists, and engineers understand and verify complex logic with confidence.
+By making formulas transparent and decision pathways explicit, Cyclops++ helps clinicians, scientists, and engineers understand and verify complex logic with confidence.
 
-Cyclops‑lang is a clinical‑grade computational tool.
+Cyclops++ is a clinical‑grade computational tool.
